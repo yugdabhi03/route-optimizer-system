@@ -1,0 +1,17 @@
+backend/venv/
+frontend/node_modules/
+
+__pycache__/
+*.pyc
+.pytest_cache/
+
+frontend/dist/
+frontend/.vite/
+backend/cache/
+
+.env
+.env.*
+!.env.example
+
+.DS_Store
+Thumbs.db
