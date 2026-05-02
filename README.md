@@ -132,4 +132,4 @@ cd backend && python -m pytest -q
 
 ## Why This Project Matters
 
-This project demonstrates end-to-end product engineering: turning route optimization logic into a usable map experience, validating API contracts, and iterating quickly from user feedback. It showcases the ability to ship across frontend, backend, and quality tooling in a way that aligns with internship-level production expectations.
+This project demonstrates end-to-end product engineering: turning route optimization logic into a usable map experience, validating API contracts, and iterating quickly from user feedback. It showcases the ability to ship across frontend, backend, and quality tooling in a way that aligns with production-level expectations.
