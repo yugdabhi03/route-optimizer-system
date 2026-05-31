@@ -1,135 +1,121 @@
-# Route Optimizer System
+# Route Optimizer
 
-Route Optimizer is a full-stack mapping project that finds an efficient order for visiting multiple stops and renders a street-following route on an interactive map.
+A small full-stack app for planning a driving route through several stops. You add points on a map (or search by address), the backend picks a sensible visit order and builds a path along real roads, and the frontend draws it on an interactive map.
 
-This project is built as an internship portfolio piece to demonstrate:
-- graph-based optimization and algorithmic decision-making,
-- backend API design with validation and error handling,
-- frontend mapping UX with React + Leaflet,
-- practical software engineering workflow (lint, tests, CI).
+## What it does
 
-## Demo
+1. Add stops by clicking the map or searching an address.
+2. Reorder, remove, or undo stops before you run the optimizer.
+3. Optionally enable **round trip** so the route returns to the first stop.
+4. The backend downloads a local OpenStreetMap road graph (via OSMnx), solves a TSP-style ordering problem, and computes turn-by-turn geometry with NetworkX.
+5. The map shows the ordered stops, total distance, per-leg distances, and lets you export CSV (stops) or GPX (track).
 
-- Live demo: _coming soon_
-- Demo video/GIF: _coming soon_
+Routing runs on your machine against OSM data. There is no Mapbox/Google routing API key.
 
 ## Screenshots
 
-![Main app view](docs/screenshots/main-view.png)
-_Main map experience with optimized street route and sidebar controls._
+| Main view | After optimize |
+|-----------|----------------|
+| ![Main view](docs/screenshots/main-view.png) | ![Optimized route](docs/screenshots/optimized-itinerary.png) |
 
-![Optimized itinerary](docs/screenshots/optimized-itinerary.png)
-_Ordered stops in the sidebar with rendered route on the map._
+## Project layout
 
-## Key Features
+```
+route-optimizer-system/
+├── backend/          FastAPI, OSMnx routing, TSP solver
+├── frontend/         React + Vite + Leaflet
+├── docs/screenshots/
+└── .github/workflows/ci.yml
+```
 
-- Click-to-add stops that are reordered into an optimized visit sequence.
-- Street-constrained route rendering built from OpenStreetMap road graph data.
-- FastAPI backend with typed request validation and structured error responses.
-- UI focused on operational clarity: itinerary ordering, state feedback, and map context.
-- Basic engineering reliability through linting, tests, and CI automation.
+## Requirements
 
-## Tech Stack
+- Python 3.11+
+- Node.js 20+
+- Internet on first run (OSM graph download is cached under `backend/cache/`)
 
-- Frontend: React, Vite, Leaflet, Axios
-- Backend: FastAPI, OSMnx, NetworkX, Shapely
-- Tooling: ESLint, pytest, GitHub Actions
+## Run locally
 
-## Architecture
-
-- `frontend`: user interactions, marker management, API call, route rendering.
-- `backend`: input validation, road-graph loading/caching, route ordering, segment pathfinding.
-
-Request flow:
-1. User drops stops on map.
-2. Frontend sends points to `POST /route`.
-3. Backend validates and loads appropriate road graph area.
-4. Backend computes optimized stop order and route segments.
-5. Frontend renders optimized itinerary and polyline route.
-
-## Setup (Local)
-
-### 1) Backend
+### Backend
 
 ```bash
 cd backend
 python -m venv venv
+
+# Windows
 venv\Scripts\activate
+# macOS / Linux
+# source venv/bin/activate
+
 pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
 
-### 2) Frontend
+API docs: http://127.0.0.1:8000/docs
+
+### Frontend
 
 ```bash
 cd frontend
-copy .env.example .env
 npm install
 npm run dev
 ```
 
-Open the local frontend URL shown by Vite and click points on the map.
+Open the URL Vite prints (usually http://localhost:5173).
 
-## Environment Configuration
+For local development you can skip a frontend `.env` file — Vite proxies `/route` and `/geocode` to port 8000. To point at another host, copy `.env.example` to `.env` and set `VITE_API_BASE_URL`.
 
-- Frontend `.env`:
-  - `VITE_API_BASE_URL=http://localhost:8000`
-- Backend `.env`:
-  - `CORS_ORIGINS=*` (tighten this for production)
+### Backend environment (optional)
+
+Copy `backend/.env.example` to `backend/.env` if you need:
+
+| Variable | Purpose |
+|----------|---------|
+| `CORS_ORIGINS` | Allowed browser origins (default `*`) |
+| `NOMINATIM_USER_AGENT` | Contact string for address search (Nominatim requires this) |
 
 ## API
 
 ### `POST /route`
 
-Request:
-
 ```json
 {
-  "points": [[43.6532, -79.3832], [43.66, -79.39], [43.64, -79.38]]
+  "points": [[43.6532, -79.3832], [43.66, -79.39]],
+  "round_trip": false
 }
 ```
 
-Response:
+| Field | Description |
+|-------|-------------|
+| `optimized_stops` | Stops in visit order `[lat, lng]` |
+| `full_path` | Polyline for the map |
+| `total_km` | Approximate driving distance |
+| `leg_distances_km` | Distance per leg |
+| `round_trip` | Whether the return leg was included |
+| `solve_time_seconds` | Wall time for the request |
 
-```json
-{
-  "status": "success",
-  "optimized_stops": [[...], [...]],
-  "full_path": [[...], [...]],
-  "total_km": 4.82,
-  "solve_time_seconds": 1.247,
-  "leg_distances_km": [1.2, 1.8, 1.82]
-}
-```
+### `GET /geocode?q=toronto`
 
-## Engineering Quality
+Returns up to five `{ display_name, lat, lon }` results. The backend calls Nominatim so the browser does not hit their API directly.
 
-- Frontend linting via ESLint
-- Backend tests via pytest + FastAPI TestClient
-- CI workflow for lint/build/tests on push and pull request
-
-Run checks locally:
+## Tests and CI
 
 ```bash
-cd frontend && npm run lint
 cd backend && python -m pytest -q
+cd frontend && npm run lint && npm run build
 ```
 
-## Known Limitations
+GitHub Actions runs the same checks on push and pull requests.
 
-- Road geometry quality varies by OpenStreetMap area completeness.
-- Some edge-case routes may still require additional path-smoothing work.
-- Advanced constraints (time windows, vehicle capacity, multi-vehicle routing) are not yet implemented.
-- Distance metrics are currently experimental and should not be treated as logistics-grade billing values.
+## Limitations
 
-## Future Improvements
+- Map and routing quality depend on OpenStreetMap in the area you pick.
+- Very large areas (>20 km spread) are rejected to keep graph downloads reasonable.
+- Address search is subject to Nominatim usage limits; do not hammer it.
+- Distances are estimates for planning, not for billing or compliance.
 
-- Add address search (geocoding) and marker edit/delete/reorder controls.
-- Add route export options (CSV/GPX) and shareable route links.
-- Add strict road-mode validation for route connectors near clicked pins.
-- Deploy frontend + backend publicly and add a hosted demo link.
-- Add benchmark scenarios and performance profiling notes.
+## Possible next steps
 
-## Why This Project Matters
-
-This project demonstrates end-to-end product engineering: turning route optimization logic into a usable map experience, validating API contracts, and iterating quickly from user feedback. It showcases the ability to ship across frontend, backend, and quality tooling in a way that aligns with internship-level production expectations.
+- Public deployment and a live demo link in this README
+- Shareable URLs that encode a stop list
+- Drag-and-drop reorder on the map
