@@ -16,7 +16,7 @@ Routing runs on your machine against OSM data. There is no Mapbox/Google routing
 
 | Main view | After optimize |
 |-----------|----------------|
-| ![Main view](docs/screenshots/main-view.png) | ![Optimized route](docs/screenshots/optimized-itinerary.png) |
+| ![Main view](docs/screenshots/app-main.png) | ![Optimized route](docs/screenshots/app-optimized-route.png) |
 
 ## Project layout
 
